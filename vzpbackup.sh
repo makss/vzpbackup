@@ -27,6 +27,7 @@ BACKUP_DIR=/store/vzpbackup
 WORK_DIR=/store/vzpbackup
 COMPRESS=no
 COMPACT=0
+FILEMODE=0
 
 ##
 ## VARIABLES
@@ -69,6 +70,7 @@ Usage: $0
 \t[--work-dir=<Temp-Directory>]
 \t[--compress=<no/pz/bz/pbz/tbz/gz/tgz/xz/txz>]
 \t[--compact]
+\t[--file-mode]
 \t[--all]
 \t<CTID> <CTID>
 --------------------------------------------------------------------
@@ -83,6 +85,7 @@ show_param() {
 	echo -e "WORK_DIR: \t\t$WORK_DIR"
 	echo -e "COMPRESS: \t\t$COMPRESS"
 	echo -e "COMPACT: \t\t$COMPACT"
+	echo -e "FILEMODE: \t\t$FILEMODE"
 	echo -e "CTIDs to backup: \t\t$CTIDS"
 	echo -e "EXCLUDE CTIDs: \t\t$EXCLUDE"
 	echo "---";
@@ -123,6 +126,9 @@ case $i in
 	;;
     --compact)
         COMPACT=1
+    ;;
+    --file-mode)
+        FILEMODE=1
     ;;
     --all)
     	CTIDS=`$VZLIST_CMD -a -Hoctid`
@@ -189,25 +195,35 @@ if grep -w "$CTID" <<< `$VZLIST_CMD -a -Hoctid` &> /dev/null; then
 	# Copy the backup somewhere safe
 	# We copy the whole directory which then also includes
 	# a possible the dump (while being suspended) and container config
-	cd $VE_PRIVATE
 	HNAME=`$VZLIST_CMD -Hohostname $CTID`
 	FILENAME="${PREFIX}${CTID}_${HNAME}_${TIMESTAMP}"
 
+	if [ $FILEMODE == 1 ]; then
+		echo "FILEMODE: ON"
+		FILENAME="${FILENAME}_files"
+		mkdir -p $WORK_DIR/$ID;
+		$VZCTL_CMD snapshot-mount $CTID --id $ID --target $WORK_DIR/$ID
+		cd $WORK_DIR/$ID;
+	else
+		cd $VE_PRIVATE;
+	fi
+
+
 	COMPRESS_SUFFIX=""
         if [ "$COMPRESS" == "tgz" ]; then
-		tar -zcvf $WORK_DIR/$FILENAME.tar.gz .
+		tar -zcf $WORK_DIR/$FILENAME.tar.gz .
 		COMPRESS_SUFFIX="gz"
         elif [ "$COMPRESS" == "tbz" ]; then
-		tar -jcvf $WORK_DIR/$FILENAME.tar.bz2 .
+		tar -jcf $WORK_DIR/$FILENAME.tar.bz2 .
 		COMPRESS_SUFFIX="bz2"
         elif [ "$COMPRESS" == "txz" ]; then
-		tar -Jcvf $WORK_DIR/$FILENAME.tar.xz .
+		tar -Jcf $WORK_DIR/$FILENAME.tar.xz .
 		COMPRESS_SUFFIX="xz"
         elif [ "$COMPRESS" == "pz" ]; then
-		tar --use-compress-program=pigz -cvf $WORK_DIR/$FILENAME.tar.gz .
+		tar --use-compress-program=pigz -cf $WORK_DIR/$FILENAME.tar.gz .
 		COMPRESS_SUFFIX="gz"
         elif [ "$COMPRESS" == "pbz" ]; then
-		tar --use-compress-program=pbzip2 -cvf $WORK_DIR/$FILENAME.tar.bz2 .
+		tar --use-compress-program=pbzip2 -cf $WORK_DIR/$FILENAME.tar.bz2 .
 		COMPRESS_SUFFIX="bz2"
         else
 		tar -cvf $WORK_DIR/$FILENAME.tar .
@@ -222,6 +238,8 @@ if grep -w "$CTID" <<< `$VZLIST_CMD -a -Hoctid` &> /dev/null; then
                         COMPRESS_SUFFIX="xz"
 		fi
         fi
+
+	cd $VE_PRIVATE;
 
         echo "Removing backup config files: "
         for f in $(ls -1 $VE_PRIVATE/dump/{$ID}.ve.*)
@@ -244,6 +262,11 @@ if grep -w "$CTID" <<< `$VZLIST_CMD -a -Hoctid` &> /dev/null; then
 
         echo "BACKUP FILE: $BACKUP_DIR/$BACKUP_FILE"
         ls -la $BACKUP_DIR/$BACKUP_FILE
+
+	if [ $FILEMODE == 1 ]; then
+		$VZCTL_CMD snapshot-umount $CTID --id $ID
+		rmdir $WORK_DIR/$ID;
+	fi
 
 	# Delete (merge) the snapshot
 	$VZCTL_CMD snapshot-delete $CTID --id $ID
