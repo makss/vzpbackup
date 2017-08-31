@@ -182,16 +182,6 @@ if grep -w "$CTID" <<< `$VZLIST_CMD -a -Hoctid` &> /dev/null; then
 	# Take CT snapshot with parameters
 	$VZCTL_CMD snapshot $CTID --id $ID $CMDLINE
 
-	# Backup configuration additional configuration files (/etc/vz/conf/$CTID.*)
-
-        echo "Copying config files: "
-        for f in $(ls -1 /etc/vz/conf/$CTID.*)
-        do
-            CONF_EXT=${f##*.}
-            cp $f "$VE_PRIVATE/dump/{$ID}.ve.$CONF_EXT"
-            echo $f
-        done
-
 	# Copy the backup somewhere safe
 	# We copy the whole directory which then also includes
 	# a possible the dump (while being suspended) and container config
@@ -205,6 +195,14 @@ if grep -w "$CTID" <<< `$VZLIST_CMD -a -Hoctid` &> /dev/null; then
 		$VZCTL_CMD snapshot-mount $CTID --id $ID --target $WORK_DIR/$ID
 		cd $WORK_DIR/$ID;
 	else
+		# Backup configuration additional configuration files (/etc/vz/conf/$CTID.*)
+		echo "Copying config files: "
+		for f in $(ls -1 /etc/vz/conf/$CTID.*)
+		do
+			CONF_EXT=${f##*.}
+			cp $f "$VE_PRIVATE/dump/{$ID}.ve.$CONF_EXT"
+			echo $f
+		done
 		cd $VE_PRIVATE;
 	fi
 
@@ -226,7 +224,7 @@ if grep -w "$CTID" <<< `$VZLIST_CMD -a -Hoctid` &> /dev/null; then
 		tar --use-compress-program=pbzip2 -cf $WORK_DIR/$FILENAME.tar.bz2 .
 		COMPRESS_SUFFIX="bz2"
         else
-		tar -cvf $WORK_DIR/$FILENAME.tar .
+		tar -cf $WORK_DIR/$FILENAME.tar .
 		if [ "$COMPRESS" == "bz" ]; then
                         bzip2 $WORK_DIR/$FILENAME.tar
                         COMPRESS_SUFFIX="bz2"
@@ -241,13 +239,6 @@ if grep -w "$CTID" <<< `$VZLIST_CMD -a -Hoctid` &> /dev/null; then
 
 	cd $VE_PRIVATE;
 
-        echo "Removing backup config files: "
-        for f in $(ls -1 $VE_PRIVATE/dump/{$ID}.ve.*)
-        do
-            ls -la "$f"
-            rm "$f"
-        done
-
 	if [ "$COMPRESS_SUFFIX" == "" ]; then
 		BACKUP_FILE="$FILENAME.tar"
 	else
@@ -258,6 +249,13 @@ if grep -w "$CTID" <<< `$VZLIST_CMD -a -Hoctid` &> /dev/null; then
 	if [ "$BACKUP_DIR" != "$WORK_DIR" ]; then
 		echo "Moving backup file"
 		mv $WORK_DIR/$BACKUP_FILE $BACKUP_DIR/$BACKUP_FILE
+	else
+		echo "Removing backup config files: "
+		for f in $(ls -1 $VE_PRIVATE/dump/{$ID}.ve.*)
+		do
+			ls -la "$f"
+			rm "$f"
+		done
 	fi
 
         echo "BACKUP FILE: $BACKUP_DIR/$BACKUP_FILE"
