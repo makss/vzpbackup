@@ -1,3 +1,7 @@
+2017-08-31 makss
+
+	* Introduce file-based backup
+
 2016-10-20 makss
 
 	* Added local and global config

@@ -6,7 +6,7 @@ OpenVZ Container Backup - for containers using ploop storage
 The scripts are meant to provide a backup solution to backup
 containers that use ploop storage. Traditional storage is
 not supported by the scripts. The scripts are based on the
-OpenVZ wiki page regarding image backup:
+OpenVZ wiki page regarding `image-based` and `file-based` backup:
 [http://openvz.org/Ploop/Backup](http://openvz.org/Ploop/Backup)
 
 ## BACKUP: vzpbackup.sh
@@ -18,6 +18,7 @@ Usage: ./vzpbackup.sh
 	[--work-dir=<Temp-Directory>]
 	[--compress=<no/pz/bz/pbz/tbz/gz/tgz/xz/txz>]
 	[--compact]
+	[--file-mode]
 	[--all]
 	<CTID> <CTID>
 ```
@@ -52,6 +53,10 @@ Options:
 
 	Runs vzctl compact for each container before initiating
 	the backup
+
+--file-mode
+
+	File backup, copy and archive the container files.
 
 --compress=\<Compression> (Default: no(ne))
 
