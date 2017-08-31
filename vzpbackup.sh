@@ -249,13 +249,6 @@ if grep -w "$CTID" <<< `$VZLIST_CMD -a -Hoctid` &> /dev/null; then
 	if [ "$BACKUP_DIR" != "$WORK_DIR" ]; then
 		echo "Moving backup file"
 		mv $WORK_DIR/$BACKUP_FILE $BACKUP_DIR/$BACKUP_FILE
-	else
-		echo "Removing backup config files: "
-		for f in $(ls -1 $VE_PRIVATE/dump/{$ID}.ve.*)
-		do
-			ls -la "$f"
-			rm "$f"
-		done
 	fi
 
         echo "BACKUP FILE: $BACKUP_DIR/$BACKUP_FILE"
@@ -264,6 +257,13 @@ if grep -w "$CTID" <<< `$VZLIST_CMD -a -Hoctid` &> /dev/null; then
 	if [ $FILEMODE == 1 ]; then
 		$VZCTL_CMD snapshot-umount $CTID --id $ID
 		rmdir $WORK_DIR/$ID;
+	else
+		echo "Removing backup config files: "
+		for f in $(ls -1 $VE_PRIVATE/dump/{$ID}.ve.*)
+		do
+			ls -la "$f"
+			rm "$f"
+		done
 	fi
 
 	# Delete (merge) the snapshot
